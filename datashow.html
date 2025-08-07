@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle - Ensaio de Ruptura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4 transition-colors duration-500" id="body">
+
+    <!-- PAINEL DE CONTROLE SUPERIOR -->
+    <div id="control-panel" class="absolute top-4 left-4 right-4 bg-gray-800/50 backdrop-blur-sm p-3 rounded-xl shadow-lg flex justify-between items-center z-20">
+        <div class="flex items-center space-x-4">
+            <button id="power-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-gray-500 disabled:cursor-not-allowed flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                <span id="power-button-text">Ligar</span>
+            </button>
+            <button id="reset-button" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg disabled:bg-gray-500 disabled:cursor-not-allowed">Resetar Ensaio</button>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div id="status-indicator" class="w-4 h-4 rounded-full bg-red-500 transition-colors duration-500"></div>
+            <button id="connect-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Conectar</button>
+            <button id="fullscreen-button" class="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg" title="Tela Cheia">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- TELA PRINCIPAL -->
+    <main id="main-content" class="w-full flex flex-col items-center justify-center text-center">
+        <!-- TELA DE STATUS (sobrepõe as outras) -->
+        <div id="status-overlay" class="hidden absolute inset-0 bg-gray-900/80 flex-col items-center justify-center z-10">
+            <h1 id="status-overlay-text" class="text-6xl font-bold text-yellow-400"></h1>
+        </div>
+        
+        <div id="welcome-screen"><h1 class="text-6xl font-bold text-gray-500">Desconectado</h1></div>
+        <div id="off-screen" class="hidden"><h1 class="text-6xl font-bold text-gray-400">Pronto para Ligar</h1></div>
+
+        <!-- TELA DE MEDIÇÃO -->
+        <div id="measurement-screen" class="hidden w-full">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h2 class="text-5xl font-bold text-gray-400">MASSA</h2>
+                    <p class="text-9xl font-black tracking-tighter"><span id="current-kg">0.000</span> kg</p>
+                </div>
+                <div>
+                    <h2 class="text-5xl font-bold text-gray-400">FORÇA</h2>
+                    <p class="text-9xl font-black tracking-tighter"><span id="current-n">0.0</span> N</p>
+                </div>
+            </div>
+            <div class="mt-12 border-t-2 border-gray-700 pt-4">
+                <h3 class="text-3xl text-blue-400">Força Máxima do Ensaio</h3>
+                <p class="text-7xl font-bold text-blue-300"><span id="max-n">0.0</span> N</p>
+            </div>
+        </div>
+
+        <!-- TELA DE RUPTURA -->
+        <div id="rupture-screen" class="hidden">
+            <h1 class="text-9xl font-black text-red-500 animate-pulse">RUPTURA</h1>
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-5xl">
+                <div>
+                    <p class="text-gray-400">Massa Máx.</p>
+                    <p><span id="rupture-max-kg" class="font-bold">0.000</span> kg</p>
+                </div>
+                <div>
+                    <p class="text-gray-400">Força Máx.</p>
+                    <p><span id="rupture-max-n" class="font-bold">0.0</span> N</p>
+                </div>
+            </div>
+            <p class="text-3xl text-gray-400 mt-8">Pressione RESET na máquina para um novo ensaio.</p>
+        </div>
+    </main>
+
+    <!-- HISTÓRICO (CANTO INFERIOR) -->
+    <div id="history-panel" class="absolute bottom-4 left-4 bg-gray-900/80 p-4 rounded-lg border border-gray-700 max-w-sm hidden">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold">Histórico de Ensaios</h3>
+            <div>
+                <button id="export-csv-button" class="text-xs bg-green-600 hover:bg-green-700 px-2 py-1 rounded">Exportar CSV</button>
+                <button id="clear-history-button" class="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded">Limpar</button>
+            </div>
+        </div>
+        <div class="max-h-48 overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-800 sticky top-0">
+                    <tr class="border-b border-gray-600">
+                        <th class="p-1 text-left">ID</th>
+                        <th class="p-1 text-left">Força Máx. (N)</th>
+                        <th class="p-1 text-left">Massa Máx. (kg)</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const elements = {
+            connectButton: document.getElementById('connect-button'),
+            fullscreenButton: document.getElementById('fullscreen-button'),
+            statusIndicator: document.getElementById('status-indicator'),
+            body: document.getElementById('body'),
+            welcomeScreen: document.getElementById('welcome-screen'),
+            offScreen: document.getElementById('off-screen'),
+            measurementScreen: document.getElementById('measurement-screen'),
+            ruptureScreen: document.getElementById('rupture-screen'),
+            historyPanel: document.getElementById('history-panel'),
+            currentKg: document.getElementById('current-kg'),
+            currentN: document.getElementById('current-n'),
+            maxN: document.getElementById('max-n'),
+            ruptureMaxKg: document.getElementById('rupture-max-kg'),
+            ruptureMaxN: document.getElementById('rupture-max-n'),
+            historyTable: document.getElementById('history-table'),
+            statusOverlay: document.getElementById('status-overlay'),
+            statusOverlayText: document.getElementById('status-overlay-text'),
+            powerButton: document.getElementById('power-button'),
+            powerButtonText: document.getElementById('power-button-text'),
+            resetButton: document.getElementById('reset-button'),
+            exportCsvButton: document.getElementById('export-csv-button'),
+            clearHistoryButton: document.getElementById('clear-history-button'),
+        };
+        
+        let port, writer, reader, historyCount = 0, lastStatus = '';
+        let historyData = [];
+
+        // --- Event Listeners ---
+        elements.connectButton.addEventListener('click', () => port ? disconnect() : connect());
+        elements.fullscreenButton.addEventListener('click', () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+        elements.powerButton.addEventListener('click', () => sendCommand("LIGAR_DESLIGAR"));
+        elements.resetButton.addEventListener('click', () => sendCommand("RESETAR"));
+        elements.clearHistoryButton.addEventListener('click', clearHistory);
+        elements.exportCsvButton.addEventListener('click', exportCSV);
+
+        // --- Funções de Conexão e Comandos ---
+        async function connect() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                const textEncoder = new TextEncoderStream();
+                const writableStream = port.writable;
+                writer = textEncoder.writable.getWriter();
+                textEncoder.readable.pipeTo(writableStream);
+                updateConnectionStatus(true);
+                readLoop();
+            } catch (error) { alert('Falha ao conectar: ' + error.message); }
+        }
+
+        async function disconnect() {
+            if (writer) await writer.close().catch(()=>{});
+            if (reader) await reader.cancel().catch(()=>{});
+            if (port) await port.close().catch(()=>{});
+            port = writer = reader = null;
+            updateConnectionStatus(false);
+        }
+        
+        async function sendCommand(cmd) {
+            if (!writer) return alert("Não é possível enviar comando. Conecte-se ao Arduino primeiro.");
+            await writer.write(cmd + '\n');
+        }
+
+        async function readLoop() {
+            const textDecoder = new TextDecoderStream();
+            port.readable.pipeTo(textDecoder.writable);
+            reader = textDecoder.readable.getReader();
+            let lineBuffer = '';
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    lineBuffer += value;
+                    let newlineIndex;
+                    while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
+                        const line = lineBuffer.slice(0, newlineIndex).trim();
+                        lineBuffer = lineBuffer.slice(newlineIndex + 1);
+                        if (line) processLine(line);
+                    }
+                }
+            } catch (error) { await disconnect(); }
+        }
+        
+        // --- Funções de Lógica e UI ---
+        function updateConnectionStatus(isConnected) {
+            elements.powerButton.disabled = !isConnected;
+            elements.resetButton.disabled = !isConnected;
+            elements.statusIndicator.classList.toggle('bg-red-500', !isConnected);
+            elements.statusIndicator.classList.toggle('bg-green-500', isConnected);
+            elements.connectButton.textContent = isConnected ? 'Desconectar' : 'Conectar';
+            switchScreen(isConnected ? 'off' : 'welcome');
+        }
+        
+        function switchScreen(screen) {
+            ['welcome', 'off', 'measurement', 'rupture'].forEach(s => elements[s + 'Screen'].classList.add('hidden'));
+            elements[screen + 'Screen'].classList.remove('hidden');
+        }
+
+        function showStatusOverlay(message, duration = 1500) {
+            elements.statusOverlayText.textContent = message;
+            elements.statusOverlay.classList.remove('hidden');
+            elements.statusOverlay.classList.add('flex');
+            setTimeout(() => {
+                elements.statusOverlay.classList.add('hidden');
+                elements.statusOverlay.classList.remove('flex');
+            }, duration);
+        }
+
+        function processLine(line) {
+            const parts = line.split(',');
+            if (parts.length < 4) return;
+            const [status, kg, n, max_kg] = parts;
+
+            if (lastStatus !== "DESLIGADO" && status === "DESLIGADO") showStatusOverlay("Desligando...");
+            if (lastStatus === "DESLIGADO" && status === "MEDINDO") showStatusOverlay("Ligando Sistema...");
+            if (lastStatus === "RUPTURA" && status === "MEDINDO") showStatusOverlay("Reiniciando Ensaio...");
+            if (status === "REINICIANDO") showStatusOverlay("Reiniciando Ensaio...");
+
+            elements.powerButtonText.textContent = (status === "DESLIGADO") ? "Ligar" : "Desligar";
+            elements.resetButton.disabled = (status !== "MEDINDO" && status !== "RUPTURA");
+
+            elements.body.classList.remove('bg-red-900', 'bg-gray-800');
+
+            if (status === 'DESLIGADO') {
+                switchScreen('off');
+                elements.body.classList.add('bg-gray-800');
+            } else if (status === 'RUPTURA') {
+                switchScreen('rupture');
+                elements.body.classList.add('bg-red-900');
+                
+                if (lastStatus !== 'RUPTURA') {
+                    const max_n_rupture = parseFloat(max_kg) * 9.807;
+                    elements.ruptureMaxKg.textContent = parseFloat(max_kg).toFixed(3);
+                    elements.ruptureMaxN.textContent = max_n_rupture.toFixed(1);
+                    addHistoryEntry(max_n_rupture, max_kg);
+                }
+            } else { // MEDINDO
+                switchScreen('measurement');
+                elements.body.classList.add('bg-black');
+                elements.currentKg.textContent = parseFloat(kg).toFixed(3);
+                elements.currentN.textContent = parseFloat(n).toFixed(1);
+                elements.maxN.textContent = (parseFloat(max_kg) * 9.807).toFixed(1);
+            }
+            lastStatus = status;
+        }
+
+        function addHistoryEntry(n, kg) {
+            historyCount++;
+            historyData.push({ id: historyCount, forca: n, massa: parseFloat(kg) });
+            renderHistory();
+        }
+
+        function clearHistory() {
+            if (confirm("Tem certeza que deseja limpar todo o histórico de ensaios?")) {
+                historyData = [];
+                historyCount = 0;
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            elements.historyTable.innerHTML = '';
+            if (historyData.length === 0) {
+                elements.historyPanel.classList.add('hidden');
+                return;
+            }
+            elements.historyPanel.classList.remove('hidden');
+            historyData.forEach(entry => {
+                const row = document.createElement('tr');
+                row.classList.add('border-t', 'border-gray-700');
+                row.innerHTML = `
+                    <td class="p-1">${entry.id}</td>
+                    <td class="p-1 font-bold">${entry.forca.toFixed(1)} N</td>
+                    <td class="p-1">${entry.massa.toFixed(3)} kg</td>
+                `;
+                elements.historyTable.prepend(row);
+            });
+        }
+
+        function exportCSV() {
+            if (historyData.length === 0) return alert("Não há dados no histórico para exportar.");
+            
+            let csvContent = "data:text/csv;charset=utf-8,ID do Ensaio,Forca Maxima (N),Massa Maxima (kg)\n";
+            historyData.forEach(entry => {
+                let row = `${entry.id},${entry.forca.toFixed(2)},${entry.massa.toFixed(4)}`;
+                csvContent += row + "\n";
+            });
+
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("download", "historico_ensaios_ruptura.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
